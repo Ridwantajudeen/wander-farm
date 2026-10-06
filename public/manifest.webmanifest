@@ -1,0 +1,17 @@
+{
+  "name": "Wander Farm",
+  "short_name": "Wander Farm",
+  "description": "A small farm adventure.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#121b2d",
+  "theme_color": "#121b2d",
+  "icons": [
+    {
+      "src": "/icons/wander-home-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

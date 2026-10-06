@@ -1,0 +1,1052 @@
+# Wander Home— Project Specification & Development Plan
+
+## 1. Project Overview
+
+We are building a small, polished, mobile-first browser game that anyone can play by opening a URL.
+
+The game should be genuinely fun as a standalone game. It may contain personalized content, including a special version for a specific person, but the underlying gameplay must not depend on romance or relationships.
+
+The intended experience is:
+
+> **Open link → Start adventure → Play several short challenges → Reach the final destination → Receive a result/reward → Replay or share**
+
+No app installation, account, or backend is required for the MVP.
+
+---
+
+# 2. Confirmed Game Concept
+
+## Working Concept: A Short Adventure Made of Mini-Game Challenges
+
+The game is one cohesive adventure rather than a collection of unrelated mini-games.
+
+The player progresses through a series of areas/challenges. Each challenge uses a different gameplay mechanic.
+
+### Core progression
+
+```text
+START
+  ↓
+ADVENTURE / EXPLORATION
+  ↓
+CATCH CHALLENGE
+  ↓
+MEMORY ROOM
+  ↓
+CHOICE CHALLENGE
+  ↓
+FINAL MAZE
+  ↓
+ENDING / RESULT
+  ↓
+REPLAY
+```
+
+The player should feel like they are progressing through **one small adventure**, not opening five separate games.
+
+---
+
+# 3. Game Experience
+
+## Opening
+
+The player sees a simple start screen.
+
+Example:
+
+> **THE LITTLE QUEST**
+>
+> Something is waiting for you at the end.
+>
+> Can you make it there?
+>
+> **START**
+
+The exact title and copy may change later.
+
+The opening should be short. We do not want a long introduction before the player can play.
+
+---
+
+# 4. Stage 1 — Adventure / Exploration
+
+The player enters a small environment and controls a character.
+
+The goal is to explore the area and reach the next section.
+
+Possible mechanics:
+
+* Move around the map
+* Avoid obstacles
+* Collect objects
+* Find keys/fragments
+* Reach a destination
+* Simple collision detection
+
+The first version should be intentionally small.
+
+### Example objective
+
+> Find 3 fragments and reach the exit.
+
+The exploration section should establish the feeling that the player is actually going somewhere.
+
+### Technical goals
+
+This stage introduces:
+
+* Player movement
+* Keyboard controls
+* Touch controls
+* Collision detection
+* Simple environment/map
+* Collectibles
+* Game state
+* Level transitions
+
+---
+
+# 5. Stage 2 — Catch Challenge
+
+The player reaches an area where objects begin falling from the top of the screen.
+
+The player controls a catcher/basket/character and must collect useful objects while avoiding harmful objects.
+
+Example:
+
+```text
+⭐ ⭐ 🍎
+     ↓
+   🧺
+```
+
+Possible mechanics:
+
+* Falling objects
+* Player movement
+* Collision detection
+* Score
+* Lives or health
+* Increasing difficulty
+* Timer
+
+The challenge should become progressively harder.
+
+### Example
+
+Collect:
+
+* Stars
+* Coins
+* Useful items
+
+Avoid:
+
+* Bombs
+* Rocks
+* Bad objects
+
+The exact objects are not final yet.
+
+---
+
+# 6. Stage 3 — Memory Room
+
+The player enters a small room containing cards.
+
+The objective is to match pairs.
+
+Example:
+
+```text
+┌────┬────┬────┬────┐
+│ ?  │ ?  │ ?  │ ?  │
+├────┼────┼────┼────┤
+│ ?  │ ?  │ ?  │ ?  │
+└────┴────┴────┴────┘
+```
+
+The player flips cards and attempts to match them.
+
+### Gameplay
+
+* Flip card
+* Reveal symbol/image
+* Flip second card
+* Match or reset
+* Track attempts/time
+* Complete the room
+
+The memory system should be data-driven so that the content can be changed without rewriting the game logic.
+
+For example:
+
+```js
+const cards = [
+  { id: 1, value: "star" },
+  { id: 2, value: "star" },
+  ...
+];
+```
+
+This will later allow personalized editions to use custom images or content.
+
+---
+
+# 7. Stage 4 — Choice Challenge
+
+The player encounters a series of short decisions.
+
+These should be quick, funny, and replayable.
+
+Example:
+
+> You have ₦10,000 left.
+>
+> What do you do?
+>
+> **A. Buy food**
+>
+> **B. Buy data**
+>
+> **C. Spend it on something completely unnecessary**
+
+Another example:
+
+> You wake up and discover you're the only person left in Akure.
+>
+> **A. Panic**
+>
+> **B. Explore**
+>
+> **C. Go straight to Shoprite**
+
+Choices may affect:
+
+* Score
+* Character status
+* Final result
+* Dialogue
+* Which ending is shown
+
+The system should be configurable so new questions can be added easily.
+
+---
+
+# 8. Stage 5 — Final Maze
+
+The player reaches the final area.
+
+They must navigate a maze and reach the destination.
+
+Possible mechanics:
+
+* Player movement
+* Walls
+* Collision detection
+* Timer
+* Exit
+* Optional hazards
+
+The maze should be small enough to complete quickly.
+
+The objective is to create a satisfying final challenge rather than an unnecessarily difficult puzzle.
+
+---
+
+# 9. Ending / Result
+
+Once the player completes the final challenge, the game produces an ending.
+
+For the general/public version:
+
+> **YOU MADE IT**
+>
+> Score: 8,420
+>
+> Rank:
+>
+> **CHAOS SURVIVOR**
+>
+> [PLAY AGAIN]
+
+The result system can eventually support different ranks/endings depending on performance.
+
+Example:
+
+```text
+0–30%   → You barely survived
+31–60%  → Not bad
+61–80%  → Pretty good
+81–95%  → Impressive
+96–100% → Absolute menace
+```
+
+Exact scoring and titles will be designed during implementation.
+
+---
+
+# 10. Personalized Edition
+
+The game should support personalization without changing its fundamental gameplay.
+
+A personalized version can contain:
+
+* Person's name
+* Custom messages
+* Photos
+* Inside jokes
+* Custom questions
+* Custom memory cards
+* Custom objects
+* Special ending
+* Special final message
+
+For example, the public version might end with:
+
+> **YOU MADE IT**
+>
+> Final score: 8,420
+
+A personalized version could end with:
+
+> **YOU MADE IT ❤️**
+>
+> I knew you'd make it.
+>
+> **— Ridwan**
+
+The important architectural principle is:
+
+> **Personalization should be content, not a separate game.**
+
+The same game engine should be capable of running different content configurations.
+
+---
+
+# 11. Core Product Principles
+
+The game must be:
+
+### Fun first
+
+Do not prioritize technical complexity over gameplay.
+
+### Mobile first
+
+The primary player may open the game from a phone.
+
+Touch controls are therefore a first-class requirement.
+
+### Fast
+
+The player should be able to start playing almost immediately.
+
+### Short
+
+A complete run should ideally take several minutes rather than 30–60 minutes.
+
+### Replayable
+
+The player should have some reason to replay:
+
+* Better score
+* Faster completion
+* Different choices
+* Different endings
+* Randomized elements
+
+### Shareable
+
+A player should be able to send someone a URL and say:
+
+> "Play this."
+
+No installation should be necessary.
+
+### Personalizable
+
+The same game should eventually support special editions without hardcoding personal content into the gameplay engine.
+
+---
+
+# 12. Technology
+
+## Initial Stack
+
+Use:
+
+* Vite
+* Vanilla JavaScript
+* HTML
+* CSS
+* Canvas where appropriate
+* Browser APIs where useful
+
+Do **not** introduce React for the MVP.
+
+React is unnecessary for the initial game and would add complexity without providing enough benefit.
+
+React can be reconsidered only if the project later evolves into something significantly larger, such as:
+
+* Accounts
+* Multiplayer
+* Game dashboards
+* Content management
+* User-generated games
+* Complex web application UI
+
+---
+
+# 13. Backend
+
+## MVP
+
+No backend.
+
+No:
+
+* Authentication
+* Database
+* User accounts
+* Server
+* API
+* Supabase
+
+The game should be completely playable from static files.
+
+Potential future features could introduce a backend, but that is outside the MVP.
+
+---
+
+# 14. Proposed Project Structure
+
+Initial structure:
+
+```text
+project/
+├── public/
+│   └── assets/
+│       ├── images/
+│       ├── audio/
+│       └── fonts/
+│
+├── src/
+│   ├── main.js
+│   │
+│   ├── game/
+│   │   ├── game.js
+│   │   ├── state.js
+│   │   ├── input.js
+│   │   ├── collision.js
+│   │   └── entities.js
+│   │
+│   ├── stages/
+│   │   ├── adventure.js
+│   │   ├── catch.js
+│   │   ├── memory.js
+│   │   ├── choices.js
+│   │   └── maze.js
+│   │
+│   ├── screens/
+│   │   ├── start.js
+│   │   ├── transition.js
+│   │   └── result.js
+│   │
+│   ├── content/
+│   │   └── gameData.js
+│   │
+│   └── styles/
+│       └── main.css
+│
+├── index.html
+├── package.json
+├── vite.config.js
+├── PROJECT.md
+└── README.md
+```
+
+This structure is a starting point, not a requirement to prematurely create every file.
+
+If the implementation remains simple, keep it simple.
+
+---
+
+# 15. Game Architecture
+
+The architecture should separate:
+
+### Game state
+
+Tracks things such as:
+
+```js
+{
+  currentStage,
+  score,
+  lives,
+  time,
+  collectedItems,
+  choices,
+  completedStages
+}
+```
+
+### Input
+
+Handles:
+
+* Keyboard
+* Touch
+* Pointer events
+
+### Game loop
+
+Responsible for:
+
+* Updating state
+* Updating entities
+* Collision detection
+* Rendering
+* Timing
+
+### Stages
+
+Each stage owns its gameplay logic.
+
+Conceptually:
+
+```text
+Game
+ ├── AdventureStage
+ ├── CatchStage
+ ├── MemoryStage
+ ├── ChoiceStage
+ └── MazeStage
+```
+
+### Content
+
+Game content should be separated from gameplay logic wherever practical.
+
+For example:
+
+```js
+const gameData = {
+  title: "The Little Quest",
+
+  stages: {
+    adventure: {...},
+    catch: {...},
+    memory: {...},
+    choices: [...],
+    maze: {...}
+  },
+
+  ending: {...}
+};
+```
+
+This makes personalization significantly easier later.
+
+---
+
+# 16. Development Strategy
+
+## Important
+
+**Do not build all five stages at once.**
+
+The project will be developed incrementally.
+
+The first goal is to determine whether the core gameplay is actually fun.
+
+---
+
+# Phase 1 — Foundation
+
+Set up:
+
+* Vite project
+* Basic HTML
+* CSS
+* JavaScript entry point
+* Game state
+* Basic screen system
+* Git repository
+* Development/build scripts
+
+### Definition of done
+
+The project starts successfully with:
+
+```bash
+npm run dev
+```
+
+and builds successfully with:
+
+```bash
+npm run build
+```
+
+---
+
+# Phase 2 — First Playable Game
+
+Build only:
+
+```text
+Start
+ ↓
+Adventure
+ ↓
+Catch
+ ↓
+Win
+```
+
+Do not build memory, choices, or maze yet.
+
+Implement:
+
+* Start screen
+* Player
+* Movement
+* Touch controls
+* Small environment
+* Collectibles
+* Catch challenge
+* Score
+* Win/lose state
+* Restart
+
+### Goal
+
+The result should already feel like a tiny game.
+
+Not a technical demo.
+
+---
+
+# Phase 3 — Game Feel
+
+Improve:
+
+* Movement responsiveness
+* Collision accuracy
+* Animations
+* Transitions
+* Feedback
+* Score feedback
+* Difficulty progression
+* Touch controls
+* Screen scaling
+* Mobile performance
+
+This phase is important.
+
+A technically functional game that feels bad is not finished.
+
+---
+
+# Phase 4 — Memory Challenge
+
+Add:
+
+```text
+Adventure
+ ↓
+Catch
+ ↓
+Memory
+ ↓
+Result
+```
+
+Implement the reusable memory-card system.
+
+Keep content configurable.
+
+---
+
+# Phase 5 — Choice Challenge
+
+Add:
+
+```text
+Adventure
+ ↓
+Catch
+ ↓
+Memory
+ ↓
+Choices
+ ↓
+Result
+```
+
+Implement:
+
+* Question data
+* Choices
+* Scoring/effects
+* Transitions
+* Replay behavior
+
+---
+
+# Phase 6 — Final Maze
+
+Add the final challenge:
+
+```text
+Adventure
+ ↓
+Catch
+ ↓
+Memory
+ ↓
+Choices
+ ↓
+Maze
+ ↓
+Ending
+```
+
+The maze becomes the final gameplay section.
+
+---
+
+# Phase 7 — Ending System
+
+Build the result/ending system.
+
+Support:
+
+* Score
+* Completion time
+* Rank
+* Different outcomes
+* Replay
+* Personalized ending text
+
+---
+
+# Phase 8 — Visual Polish
+
+Improve the overall presentation:
+
+* Typography
+* Backgrounds
+* Character design
+* UI
+* Animations
+* Transitions
+* Sound
+* Music where appropriate
+* Loading behavior
+* Mobile layout
+
+The game should feel like a deliberate product rather than a developer prototype.
+
+---
+
+# Phase 9 — Personalization
+
+Create a content configuration that allows a special edition to be produced without changing core gameplay code.
+
+Potential customization:
+
+```text
+name
+messages
+images
+memory cards
+questions
+objects
+ending
+```
+
+The personalized edition should reuse the same game engine.
+
+---
+
+# Phase 10 — Testing & Deployment
+
+Test on:
+
+### Mobile
+
+* Android Chrome
+* iPhone Safari
+* Different screen sizes
+* Touch interaction
+* Portrait orientation
+
+### Desktop
+
+* Chrome
+* Edge
+* Firefox
+
+Test:
+
+* Starting
+* Restarting
+* Completing every stage
+* Losing
+* Reloading
+* Touch controls
+* Audio
+* Asset loading
+* Performance
+* Build output
+
+Then deploy as a static website.
+
+---
+
+# 17. Performance Requirements
+
+The game should remain lightweight.
+
+Avoid:
+
+* Huge dependencies
+* Unnecessary frameworks
+* Large image files
+* Excessive animation
+* Unnecessary network requests
+
+Prefer:
+
+* Optimized assets
+* Small bundles
+* Efficient animation loops
+* Browser-native APIs
+* Lazy loading where useful
+
+The player should be able to open the URL and start playing quickly on mobile data.
+
+---
+
+# 18. Audio
+
+Audio is optional initially.
+
+If added, support:
+
+* Background music
+* Button sounds
+* Collision sounds
+* Success/failure sounds
+* Stage transition sounds
+
+Do not make the game dependent on audio.
+
+Mobile browsers often restrict automatic audio playback, so audio must start after a user interaction.
+
+---
+
+# 19. Accessibility
+
+At minimum:
+
+* Readable text
+* Sufficient contrast
+* Buttons large enough for touch
+* Avoid relying exclusively on color
+* Clear feedback for success/failure
+* Keyboard support where practical
+
+---
+
+# 20. Sharing
+
+The MVP should be shareable simply by URL.
+
+Potential future improvements:
+
+* Web Share API
+* Share result
+* Share score
+* Generate personalized game links
+* Query/hash-based game configurations
+
+Example future URL:
+
+```text
+game.com/play?mode=personal
+```
+
+or:
+
+```text
+game.com/play/abc123
+```
+
+These are future possibilities, not MVP requirements.
+
+---
+
+# 21. Future Possibilities
+
+Do not implement these during MVP unless the project naturally requires them:
+
+* Multiplayer
+* Accounts
+* Leaderboards
+* Online scores
+* User-generated levels
+* Custom game creation
+* Backend
+* Supabase
+* Cloud saves
+* Multiple major game worlds
+
+The project should prove that the core game is fun before becoming a platform.
+
+---
+
+# 22. Codex Instructions
+
+Codex should treat this document as the project's current source of truth.
+
+Before making significant changes:
+
+1. Read `PROJECT.md`.
+2. Inspect the current implementation.
+3. Understand what already works.
+4. Make the smallest sensible change.
+5. Avoid unnecessary dependencies.
+6. Do not migrate frameworks without a strong reason.
+7. Do not rewrite working systems unnecessarily.
+8. Test the change.
+9. Report what changed.
+10. Mention any assumptions or conflicts.
+
+If the requested implementation conflicts with this document, explain the conflict before making a major architectural decision.
+
+Codex should favor working gameplay over theoretical architecture.
+
+---
+
+# 23. Development Rule
+
+### Do not over-engineer the game.
+
+We are building a fun game, not a game engine company.
+
+If a system can reasonably be implemented in 50 lines instead of creating five abstractions and three interfaces, prefer the simpler solution.
+
+Refactor when complexity becomes real.
+
+Do not create complexity because it might become necessary someday.
+
+---
+
+# 24. Definition of Done
+
+The project is considered MVP-complete when a player can:
+
+1. Open a URL.
+2. Start the game.
+3. Play the adventure section.
+4. Complete the catch challenge.
+5. Complete the memory challenge.
+6. Complete the choice challenge.
+7. Complete the final maze.
+8. Receive a final result.
+9. Restart and play again.
+10. Complete the entire experience on a phone without installing anything.
+
+The game should feel:
+
+* Responsive
+* Fast
+* Polished
+* Understandable
+* Fun
+* Replayable
+
+---
+
+# 25. Current Decision Log
+
+## Confirmed
+
+* Browser game
+* URL-based access
+* Mobile-first
+* Must work for people other than the intended personalized recipient
+* Actual gameplay, not merely an interactive love letter
+* Adventure-based structure
+* Multiple gameplay mechanics
+* Adventure/exploration
+* Catch challenge
+* Memory challenge
+* Choice challenge
+* Final maze
+* Personalized ending
+* Vite
+* Vanilla JavaScript
+* No backend for MVP
+* No account required
+* Static deployment
+* Incremental development
+* Gameplay before polish
+* Personalization as configurable content
+
+## Not Yet Finalized
+
+* Final game name
+* Final art style
+* Character design
+* Exact story/theme
+* Exact objects
+* Exact scoring system
+* Exact maze design
+* Final sound/music direction
+* Final hosting provider
+* Final personalized content
+
+These decisions can be made during implementation without changing the core architecture.
+
+---
+
+# 26. Immediate Next Step
+
+Do **not** start by implementing all five stages.
+
+Start with:
+
+```text
+START
+ ↓
+ADVENTURE
+ ↓
+CATCH
+ ↓
+WIN
+```
+
+The first prototype should answer one question:
+
+> **Is this actually fun to play?**
+
+If yes, continue building the remaining stages.
+
+If no, change the gameplay before investing heavily in visuals, personalization, or architecture.
+
+---
+
+# 27. Guiding Principle
+
+> **Build the smallest version that is actually fun.**
+
+The goal is not to prove that we can build a complicated browser game.
+
+The goal is to make something that someone opens from a link and immediately thinks:
+
+> **“Wait, this is actually fun.”**
