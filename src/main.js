@@ -2,7 +2,7 @@ import "./styles/main.css";
 import { gameData } from "./content/gameData.js";
 import { characterMarkup, rewardBurstMarkup } from "./game/animation.js";
 import { audio } from "./game/audio.js";
-import { getRun, hasSavedProgress, resetRun, startRun, updateRun } from "./game/state.js";
+import { buildHousePart, getRun, hasSavedProgress, resetRun, startRun, updateRun } from "./game/state.js";
 import { getAdventure, jumpAdventure, moveAdventure, resetAdventure } from "./stages/adventure.js";
 import { getCatch, moveCatcher, resetCatch, setCatcherPosition, updateCatch } from "./stages/catch.js";
 import { flipMemoryCard, getMemory, resetMemory, resetOpenPair, updateMemoryTimer } from "./stages/memory.js";
@@ -29,6 +29,7 @@ let adventureTouchStart;
 let adventureLastDirection = "up";
 let adventureLastTap = 0;
 let catchTouchStart;
+let homeConstructionPart = null;
 
 function isStandaloneApp() {
   return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
@@ -211,17 +212,75 @@ function restartAdventureFromStageTwo() {
   render();
 }
 
+const homeProjects = [
+  { part: "foundation", label: "Foundation", cost: 800 },
+  { part: "walls", label: "Walls", cost: 1000 },
+  { part: "roof", label: "Roof", cost: 1500 },
+  { part: "door", label: "Door", cost: 700 },
+  { part: "windows", label: "Windows", cost: 900 },
+  { part: "roofSupports", label: "Roof supports", cost: 1800 },
+  { part: "wallSupports", label: "Wall supports", cost: 1800 },
+  { part: "reinforcedRoof", label: "Stronger roof", cost: 2200 },
+  { part: "reinforcedDoor", label: "Reinforced door", cost: 1400 },
+  { part: "windowProtection", label: "Window protection", cost: 1600 },
+  { part: "foundationReinforcement", label: "Foundation reinforcement", cost: 1800 },
+  { part: "floor", label: "Wooden floor", cost: 1200 },
+  { part: "bed", label: "Bed", cost: 2000 },
+  { part: "table", label: "Table", cost: 1000 },
+  { part: "chairs", label: "Chairs", cost: 900 },
+  { part: "lamp", label: "Lamp", cost: 1500 },
+  { part: "fireplace", label: "Fireplace", cost: 1800 },
+  { part: "kitchen", label: "Kitchen", cost: 3000 },
+  { part: "curtains", label: "Curtains", cost: 800 },
+  { part: "garden", label: "Garden", cost: 2200 },
+  { part: "fence", label: "Fence", cost: 1700 },
+  { part: "flowers", label: "Flowers", cost: 700 },
+  { part: "pathway", label: "Pathway", cost: 900 },
+  { part: "mailbox", label: "Mailbox", cost: 600 },
+  { part: "outdoorSeating", label: "Outdoor seating", cost: 1800 },
+  { part: "trees", label: "Trees", cost: 1400 },
+  { part: "decorations", label: "Decorations", cost: 1200 }
+];
+
+function homeHouseMarkup(house) {
+  const constructionClass = homeConstructionPart ? `is-building-${homeConstructionPart}` : "";
+  return `<div class="home-house ${house.foundation ? "is-founded" : "is-empty"} ${house.walls ? "has-walls" : ""} ${house.roof ? "has-roof" : ""} ${house.door ? "has-door" : ""} ${house.windows ? "has-windows" : ""} ${house.roofSupports ? "has-roof-supports" : ""} ${house.wallSupports ? "has-wall-supports" : ""} ${house.reinforcedRoof ? "has-reinforced-roof" : ""} ${house.reinforcedDoor ? "has-reinforced-door" : ""} ${house.windowProtection ? "has-window-protection" : ""} ${house.foundationReinforcement ? "has-foundation-reinforcement" : ""} ${house.floor ? "has-floor" : ""} ${house.bed ? "has-bed" : ""} ${house.table ? "has-table" : ""} ${house.chairs ? "has-chairs" : ""} ${house.lamp ? "has-lamp" : ""} ${house.fireplace ? "has-fireplace" : ""} ${house.kitchen ? "has-kitchen" : ""} ${house.curtains ? "has-curtains" : ""} ${house.garden ? "has-garden" : ""} ${house.fence ? "has-fence" : ""} ${house.flowers ? "has-flowers" : ""} ${house.pathway ? "has-pathway" : ""} ${house.mailbox ? "has-mailbox" : ""} ${house.outdoorSeating ? "has-outdoor-seating" : ""} ${house.trees ? "has-trees" : ""} ${house.decorations ? "has-decorations" : ""} ${constructionClass}" aria-label="${house.foundation ? "Your unfinished farmhouse" : "An empty house plot"}"><i class="home-house__foundation"></i><i class="home-house__walls"></i><i class="home-house__roof"></i><i class="home-house__door"></i><i class="home-house__window home-house__window--one"></i><i class="home-house__window home-house__window--two"></i><i class="home-house__support home-house__support--roof"></i><i class="home-house__support home-house__support--wall"></i><i class="home-house__reinforced-roof"></i><i class="home-house__reinforced-door"></i><i class="home-house__window-shield home-house__window-shield--one"></i><i class="home-house__window-shield home-house__window-shield--two"></i><i class="home-house__floor"></i><i class="home-house__bed"></i><i class="home-house__table"></i><i class="home-house__chairs"></i><i class="home-house__lamp"></i><i class="home-house__fireplace"></i><i class="home-house__kitchen"></i><i class="home-house__curtain home-house__curtain--one"></i><i class="home-house__curtain home-house__curtain--two"></i><i class="home-house__yard-home-house"></i><i class="home-house__garden"></i><i class="home-house__fence"></i><i class="home-house__flowers"></i><i class="home-house__pathway"></i><i class="home-house__mailbox"></i><i class="home-house__seating"></i><i class="home-house__tree home-house__tree--one"></i><i class="home-house__tree home-house__tree--two"></i><i class="home-house__decorations"></i><i class="home-house__warmth"></i></div>`;
+}
+
+function homeRainMarkup() {
+  return `<div class="home-rain" aria-hidden="true">${Array.from({ length: 22 }, (_, index) => `<i style="--rain-x:${(index * 47) % 100}%;--rain-delay:${(index % 7) * -.23}s"></i>`).join("")}</div>`;
+}
+
 function renderStart() {
   const run = getRun();
-  const stageName = { adventure: "The First Path", catch: "Orchard Rush", memory: "Memory Barn", defend: "Defend the Farmhouse" }[run.currentStage];
+  const nextProject = homeProjects.find((project) => !run.house[project.part]);
+  const scoreSummary = `<div class="home-score"><span>Build Points</span><strong>${run.buildPoints}</strong><small>Saved for your home</small></div>`;
   const savedProgress = hasSavedProgress()
-    ? `<div class="save-summary"><span>${run.lastMemory ? "Your saved last memory" : "Your saved farm story"}</span><strong>${run.score} points</strong><small>${run.lastMemory ? "The farmhouse is safe" : `Next: ${stageName}`}</small></div><button class="button button--primary" type="button" data-action="resume">${run.lastMemory ? "View last memory" : "Continue adventure"} <span aria-hidden="true">&#8594;</span></button><button class="text-button" type="button" data-action="new-game">Start a new story</button>`
+    ? `<button class="button button--primary" type="button" data-action="resume">${run.lastMemory ? "View last memory" : "Continue adventure"} <span aria-hidden="true">&#8594;</span></button><button class="text-button" type="button" data-action="new-game">Start a new story</button>`
     : `<button class="button button--primary" type="button" data-action="start">Start adventure <span aria-hidden="true">&#8594;</span></button>`;
-  app.innerHTML = screenFrame(`<div class="start-card"><p class="eyebrow">A small farm adventure</p><h1>${gameData.title}</h1><p class="lede">${gameData.subtitle}</p><p class="prompt">${gameData.startPrompt}</p>${savedProgress}<p class="hint">Keyboard and touch controls supported.</p></div>`, "start");
+  const partner = characterMarkup({ state: run.house.foundation ? "idle" : "hurt", avatar: run.avatar || "female" });
+  const houseAction = nextProject && run.buildPoints >= nextProject.cost ? `<button class="home-build-button" type="button" data-action="build-house-part" data-house-part="${nextProject.part}">Build ${nextProject.label.toLowerCase()}</button>` : "";
+  const homeMessage = message && getRun().currentScreen === "start" ? `<p class="home-message">${message}</p>` : "";
+  app.innerHTML = screenFrame(`${scoreSummary}<div class="home-layout"><div class="home-scene ${run.house.foundation ? "home-scene--built" : "home-scene--rain"}">${homeRainMarkup()}${homeHouseMarkup(run.house)}<div class="home-partner">${partner}</div><p class="home-scene__caption">${run.house.foundation ? "A beginning worth protecting." : "Someone you love is out in the rain."}</p>${houseAction}</div><div class="start-card"><p class="eyebrow">A small farm adventure</p><h1>${gameData.title}</h1><p class="lede">${run.house.foundation ? "Your home is growing one good day at a time." : "Let’s build them somewhere warm."}</p>${homeMessage}${savedProgress}<p class="hint">Keyboard and touch controls supported.</p></div></div>`, "start");
+}
+
+function renderBuildHome() {
+  const run = getRun();
+  const nextProject = homeProjects.find((project) => !run.house[project.part]);
+  const projects = homeProjects.map((project, index) => {
+    const complete = Boolean(run.house[project.part]);
+    const previousComplete = index === 0 || Boolean(run.house[homeProjects[index - 1].part]);
+    const affordable = run.buildPoints >= project.cost;
+    const locked = !complete && !previousComplete;
+    const status = complete ? "Built" : locked ? "Locked" : `${project.cost} Build Points`;
+    const action = !complete && !locked && affordable ? `<button class="build-project__button" type="button" data-action="build-house-part" data-house-part="${project.part}">Build</button>` : "";
+    return `<div class="build-project ${complete ? "is-complete" : locked ? "is-locked" : ""}"><span class="build-project__icon">${complete ? "&#10003;" : index + 1}</span><div><strong>${project.label}</strong><small>${status}</small></div>${action}</div>`;
+  }).join("");
+  app.innerHTML = screenFrame(`<div class="build-home-card"><button class="build-home-back" type="button" data-action="exit-to-home">&#8592; Home</button><p class="eyebrow">Your home</p><h1>Build the farmhouse</h1><p class="lede">Spend Build Points to bring each part to life.</p><div class="build-home-scene home-scene ${run.house.foundation ? "home-scene--built" : "home-scene--rain"}">${homeRainMarkup()}${homeHouseMarkup(run.house)}<div class="home-partner">${characterMarkup({ state: "idle", avatar: run.avatar || "female" })}</div></div><div class="build-points-total"><span>Build Points</span><strong>${run.buildPoints}</strong></div><div class="build-project-list">${projects}</div>${nextProject ? `<p class="build-home-next">Next: ${nextProject.label}</p>` : `<p class="build-home-next">Your first shelter is complete.</p>`}</div>`, "build-home");
 }
 
 function renderCharacterSelect() {
-  app.innerHTML = screenFrame(`<div class="choose-card">${farmBackdropMarkup()}<p class="eyebrow">Choose your farmer</p><h1>Who is heading home?</h1><p class="lede">Pick your character, then make the farm proud.</p><div class="avatar-options"><button class="avatar-choice" type="button" data-avatar="female"><span class="avatar-preview">${characterMarkup({ state: "idle", avatar: "female" })}</span><strong>Farm girl</strong><small>Quick feet, big energy</small></button><button class="avatar-choice" type="button" data-avatar="male"><span class="avatar-preview">${characterMarkup({ state: "idle", avatar: "male" })}</span><strong>Farm boy</strong><small>Ready for the fields</small></button></div></div>`, "choose");
+  app.innerHTML = screenFrame(`<button class="choose-back" type="button" data-action="exit-to-home"><span aria-hidden="true">&#8592;</span> Back</button><div class="choose-card">${farmBackdropMarkup()}<p class="eyebrow">Choose your farmer</p><h1>Who is heading home?</h1><p class="lede">Pick your character, then make the farm proud.</p><div class="avatar-options"><button class="avatar-choice" type="button" data-avatar="female"><span class="avatar-preview">${characterMarkup({ state: "idle", avatar: "female" })}</span><strong>Farm girl</strong><small>Quick feet, big energy</small></button><button class="avatar-choice" type="button" data-avatar="male"><span class="avatar-preview">${characterMarkup({ state: "idle", avatar: "male" })}</span><strong>Farm boy</strong><small>Ready for the fields</small></button></div></div>`, "choose");
 }
 
 function adventureCell(x, y, stage) {
@@ -349,7 +408,7 @@ function renderLastMemory() {
   const run = getRun();
   const praise = run.avatar === "female" ? gameData.ending.femaleMessage : gameData.ending.maleMessage;
   const bossResult = run.lastMemory?.difficulty ? `<p class="boss-result">${gameData.stages.defend.boss.difficulties[run.lastMemory.difficulty].label} Stage 4 score <b>${run.lastMemory.bossScore}</b></p>` : "";
-  app.innerHTML = screenFrame(`<div class="last-memory-card">${farmBackdropMarkup()}<p class="eyebrow">${gameData.ending.title}</p><div class="transition-character">${characterMarkup({ state: "victory", direction: facing, avatar: run.avatar || "male" })}${rewardBurstMarkup()}</div><h1>The farmhouse is safe.</h1><p class="lede">${gameData.ending.copy}</p><p class="last-memory-card__praise">${praise}</p>${bossResult}<div class="score-row"><span>Story score</span><strong>${run.score}</strong></div><button class="button button--primary" type="button" data-action="view-result">Keep this memory <span aria-hidden="true">&#8594;</span></button></div>`, "transition");
+  app.innerHTML = screenFrame(`<div class="last-memory-card">${farmBackdropMarkup()}<p class="eyebrow">${gameData.ending.title}</p><div class="transition-character">${characterMarkup({ state: "victory", direction: facing, avatar: run.avatar || "male" })}${rewardBurstMarkup()}</div><h1>The farmhouse is safe.</h1><p class="lede">${gameData.ending.copy}</p><p class="last-memory-card__praise">${praise}</p>${bossResult}<div class="story-deposit"><span>Story points added</span><strong>+${run.score}</strong></div><div class="score-row"><span>Farm Points balance</span><strong>${run.totalScore}</strong></div><button class="button button--primary" type="button" data-action="view-result">Keep this memory <span aria-hidden="true">&#8594;</span></button><button class="button button--secondary" type="button" data-action="exit-to-home">Return home</button></div>`, "transition");
 }
 
 function difficultyCardsMarkup() {
@@ -402,6 +461,7 @@ function render() {
     case "result": renderResult(); break;
     case "failure": renderFailure(); break;
     case "memory-failure": renderMemoryFailure(); break;
+    case "build-home": renderBuildHome(); break;
     default: renderStart();
   }
 }
@@ -565,6 +625,7 @@ function startDefendLoop() {
       const baseScore = Math.max(20, stage.boss.difficulty && gameData.stages.defend.boss.difficulties[stage.boss.difficulty].stagePoints * Math.max(.4, 1 - retriesUsed * .15));
       const bossScore = finishStage("defend", baseScore);
       const finalScore = getRun().score;
+      const buildPoints = getRun().buildPoints + finalScore;
       const bossHighScores = { ...getRun().bossHighScores, [stage.boss.difficulty]: Math.max(getRun().bossHighScores[stage.boss.difficulty], bossScore) };
       audio.playSfx("bossDefeat", { cooldown: 900 });
       audio.softenMusic();
@@ -572,6 +633,7 @@ function startDefendLoop() {
         currentScreen: "last-memory",
         completedStages: [...new Set([...getRun().completedStages, "defend"])],
         score: finalScore,
+        buildPoints,
         bossHighScores,
         lastMemory: { title: gameData.ending.title, completedAt: new Date().toISOString(), score: finalScore, difficulty: stage.boss.difficulty, bossScore }
       });
@@ -851,6 +913,7 @@ app.addEventListener("click", (event) => {
   const avatar = event.target.closest("[data-avatar]")?.dataset.avatar;
   const cardId = event.target.closest("[data-card-id]")?.dataset.cardId;
   const defendLevel = event.target.closest("[data-defend-level]")?.dataset.defendLevel;
+  const housePart = event.target.closest("[data-house-part]")?.dataset.housePart;
   if (direction) {
     if (getRun().currentScreen === "adventure") handleAdventureMove(direction);
     if (getRun().currentScreen === "catch" && (direction === "left" || direction === "right")) handleCatchMove(direction);
@@ -881,7 +944,31 @@ app.addEventListener("click", (event) => {
     render();
     return;
   }
+  if (!action && getRun().currentScreen === "start" && event.target.closest(".home-scene")) {
+    updateRun({ currentScreen: "build-home" });
+    render();
+    return;
+  }
   if (!action) return;
+  if (action === "build-house-part" && housePart) {
+    const project = homeProjects.find((item) => item.part === housePart);
+    if (!project) return;
+    const result = buildHousePart(project.part, project.cost);
+    if (result.built) {
+      homeConstructionPart = project.part;
+      updateRun({ currentScreen: "start" });
+      message = `${project.label} complete! The home is growing.`;
+      render();
+      window.setTimeout(() => {
+        if (getRun().currentScreen === "start") {
+          homeConstructionPart = null;
+          message = "";
+          render();
+        }
+      }, 1800);
+    }
+    return;
+  }
   if (action === "pause") { pauseGame(); return; }
   if (action === "resume-game") { resumeGame(); return; }
   if (action === "start-over-story") { startOverStory(); return; }
