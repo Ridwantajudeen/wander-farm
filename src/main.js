@@ -98,7 +98,7 @@ function farmBackdropMarkup() {
 }
 
 function pauseButtonMarkup() {
-  return `<button class="pause-button" type="button" data-action="pause" aria-label="Pause game"><span aria-hidden="true">&#10074;&#10074;</span> Pause</button>`;
+  return `<button class="pause-button" type="button" data-action="pause" aria-label="Open game menu"><span aria-hidden="true">&#9776;</span> Menu</button>`;
 }
 
 function pauseGame() {
@@ -107,7 +107,7 @@ function pauseGame() {
   audio.pauseMusic();
   cancelAnimationFrame(animationFrame);
   cancelAnimationFrame(memoryFrame);
-  app.insertAdjacentHTML("beforeend", `<div class="pause-overlay" role="dialog" aria-modal="true" aria-labelledby="pause-title"><div class="pause-card"><p class="eyebrow">Farm break</p><h2 id="pause-title">Game paused</h2><p>Your timer, score, and farm are waiting right here.</p><button class="button button--primary" type="button" data-action="resume-game">Continue <span aria-hidden="true">&#8594;</span></button></div></div>`);
+  app.insertAdjacentHTML("beforeend", `<div class="pause-overlay" role="dialog" aria-modal="true" aria-labelledby="pause-title"><div class="pause-card"><p class="eyebrow">Wander Farm</p><h2 id="pause-title">Farm menu</h2><p>Your timer, score, and farm are waiting right here.</p><div class="pause-card__actions"><button class="button button--primary" type="button" data-action="resume-game">Resume <span aria-hidden="true">&#8594;</span></button><button class="menu-button" type="button" data-action="start-over-story">Start over story</button><button class="menu-button menu-button--quiet" type="button" data-action="exit-to-home">Exit to home</button></div></div></div>`);
 }
 
 function resumeGame() {
@@ -115,6 +115,32 @@ function resumeGame() {
   isPaused = false;
   audio.resumeMusic();
   app.querySelector(".pause-overlay")?.remove();
+  render();
+}
+
+function startOverStory() {
+  window.clearTimeout(transitionTimer);
+  window.clearTimeout(memoryTimer);
+  window.clearTimeout(defendTimer);
+  isPaused = false;
+  resetRun();
+  resetAdventure();
+  resetCatch();
+  resetMemory();
+  resetDefend();
+  message = "";
+  effectCell = null;
+  characterAction = "idle";
+  updateRun({ currentScreen: "choose" });
+  render();
+}
+
+function exitToHome() {
+  window.clearTimeout(transitionTimer);
+  window.clearTimeout(memoryTimer);
+  window.clearTimeout(defendTimer);
+  isPaused = false;
+  updateRun({ currentScreen: "start" });
   render();
 }
 
@@ -791,19 +817,11 @@ app.addEventListener("click", (event) => {
   if (!action) return;
   if (action === "pause") { pauseGame(); return; }
   if (action === "resume-game") { resumeGame(); return; }
+  if (action === "start-over-story") { startOverStory(); return; }
+  if (action === "exit-to-home") { exitToHome(); return; }
   if (action === "start" || action === "new-game") {
-    window.clearTimeout(transitionTimer);
-    window.clearTimeout(memoryTimer);
-    window.clearTimeout(defendTimer);
-    resetRun();
-    resetAdventure();
-    resetCatch();
-    resetMemory();
-    resetDefend();
-    message = "";
-    effectCell = null;
-    characterAction = "idle";
-    updateRun({ currentScreen: "choose" });
+    startOverStory();
+    return;
   }
   if (action === "resume") { audio.startMusic(); resumeSavedRun(); }
   if (action === "view-result") { updateRun({ currentScreen: "result" }); }
@@ -826,7 +844,7 @@ app.addEventListener("click", (event) => {
       return;
     }
   }
-  if (action === "restart") { window.clearTimeout(transitionTimer); window.clearTimeout(memoryTimer); window.clearTimeout(defendTimer); resetRun(); resetAdventure(); resetCatch(); resetMemory(); resetDefend(); message = ""; effectCell = null; characterAction = "idle"; }
+  if (action === "restart") { startOverStory(); return; }
   render();
 });
 

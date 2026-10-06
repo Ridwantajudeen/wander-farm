@@ -25,7 +25,7 @@ export const gameData = {
         { key: "apple", icon: "&#127822;", label: "apple" },
         { key: "bee", icon: "&#128029;", label: "bee" },
         { key: "chicken", icon: "&#128020;", label: "chicken" },
-        { key: "flower", icon: "&#127803;", label: "flower" },
+        { key: "flower", icon: "&#127799;", label: "tulip" },
         { key: "carrot", icon: "&#129365;", label: "carrot" },
         { key: "cow", icon: "&#128004;", label: "cow" },
         { key: "tractor", icon: "&#128668;", label: "tractor" },
