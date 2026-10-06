@@ -155,6 +155,62 @@ function runWhenUnpaused(callback, delay = 0) {
   return window.setTimeout(run, delay);
 }
 
+const stageOrder = ["adventure", "catch", "memory", "defend"];
+
+function attemptMultiplier(attempts) {
+  return [1, .75, .5, .25][Math.min(Math.max(attempts - 1, 0), 3)];
+}
+
+function sumStageScores(scores) {
+  return Object.values(scores).reduce((total, score) => total + score, 0);
+}
+
+function updateStageScores(changes) {
+  const stageScores = { ...getRun().stageScores, ...changes };
+  updateRun({ stageScores, score: sumStageScores(stageScores) });
+  return stageScores;
+}
+
+function recordStageAttempt(stage) {
+  const stageAttempts = { ...getRun().stageAttempts, [stage]: getRun().stageAttempts[stage] + 1 };
+  updateRun({ stageAttempts });
+  return stageAttempts[stage];
+}
+
+function clearScoresFrom(stage) {
+  const index = stageOrder.indexOf(stage);
+  const cleared = stageOrder.slice(index).reduce((scores, stageName) => ({ ...scores, [stageName]: 0 }), {});
+  updateStageScores(cleared);
+}
+
+function finishStage(stage, baseScore) {
+  const awarded = Math.round(baseScore * attemptMultiplier(getRun().stageAttempts[stage] || 1));
+  updateStageScores({ [stage]: awarded });
+  return awarded;
+}
+
+function startCatchRound({ resetRetries = true } = {}) {
+  resetCatch();
+  clearScoresFrom("catch");
+  const attempt = recordStageAttempt("catch");
+  updateRun({
+    currentScreen: "catch",
+    currentStage: "catch",
+    stageRetries: { ...getRun().stageRetries, catch: resetRetries ? 0 : getRun().stageRetries.catch },
+    lastScore: getRun().score
+  });
+  return attempt;
+}
+
+function restartAdventureFromStageTwo() {
+  resetAdventure();
+  clearScoresFrom("adventure");
+  recordStageAttempt("adventure");
+  updateRun({ currentScreen: "adventure", currentStage: "adventure", stageRetries: { ...getRun().stageRetries, catch: 0 } });
+  message = "The orchard sent you back to the path. Gather apples and try again.";
+  render();
+}
+
 function renderStart() {
   const run = getRun();
   const stageName = { adventure: "The First Path", catch: "Orchard Rush", memory: "Memory Barn", defend: "Defend the Farmhouse" }[run.currentStage];
@@ -173,7 +229,7 @@ function adventureCell(x, y, stage) {
   const isPlayer = stage.player.x === x && stage.player.y === y;
   const isExit = stage.exit.x === x && stage.exit.y === y;
   const isFragment = stage.fragments.has(key);
-  const locked = isExit && stage.fragments.size > 0;
+  const locked = isExit && stage.applesCollected < stage.requiredApples;
   const classes = ["map-cell"];
   if (stage.walls.has(key)) classes.push("map-cell--wall");
   if (isExit) classes.push("map-cell--exit", locked ? "is-locked" : "is-open");
@@ -190,7 +246,7 @@ function renderAdventure() {
   const stage = getAdventure();
   const cells = [];
   for (let y = 0; y < stage.rows; y += 1) for (let x = 0; x < stage.columns; x += 1) cells.push(adventureCell(x, y, stage));
-  app.innerHTML = screenFrame(`<div class="game-card adventure-card">${farmBackdropMarkup()}<div class="stage-heading"><div><p class="eyebrow">Stage 1 of 3</p><h1>${gameData.stages.adventure.name}</h1></div><div class="stage-heading__actions"><span class="counter">${getRun().score} <small>points</small></span>${pauseButtonMarkup()}</div></div><p class="objective">Pick 3 apples. Swipe through the field, and double-tap to jump over a thorn patch.</p><div class="adventure-map" data-adventure-board role="application" aria-label="Swipe to move through the farm. Double-tap to jump over a thorn patch.">${cells.join("")}</div><p class="adventure-gesture-hint"><span>Swipe to move</span><span>Double-tap to jump</span></p><p class="game-message">${message || (stage.fragments.size ? "Apples add points. Thorn patches can be jumped over." : "The farmhouse is glowing. Head home!")}</p></div>`, "game");
+  app.innerHTML = screenFrame(`<div class="game-card adventure-card">${farmBackdropMarkup()}<div class="stage-heading"><div><p class="eyebrow">Stage 1 of 4</p><h1>${gameData.stages.adventure.name}</h1></div><div class="stage-heading__actions"><span class="counter">${stage.applesCollected}/${stage.requiredApples} <small>apples</small></span>${pauseButtonMarkup()}</div></div><p class="objective">Gather 4 apples from the field. Swipe to move and double-tap to jump thorn patches.</p><div class="adventure-map" data-adventure-board role="application" aria-label="Swipe to move through the farm. Double-tap to jump over a thorn patch.">${cells.join("")}</div><p class="adventure-gesture-hint"><span>Swipe to move</span><span>Double-tap to jump</span></p><p class="game-message">${message || (stage.applesCollected < stage.requiredApples ? "Six apples are hidden in safe, changing places. Thorn patches can be jumped over." : "The farmhouse is glowing. Head home!")}</p></div>`, "game");
 }
 
 function fallingMarkup(objects) {
@@ -200,7 +256,7 @@ function fallingMarkup(objects) {
 
 function renderCatch() {
   const stage = getCatch();
-  app.innerHTML = screenFrame(`<div class="game-card catch-card">${farmBackdropMarkup()}<div class="stage-heading"><div><p class="eyebrow">Stage 2 of 3</p><h1>Orchard Rush</h1></div><div class="stage-heading__actions"><span class="timer"><strong data-time>${Math.ceil(stage.timeRemaining / 1000)}</strong>s</span>${pauseButtonMarkup()}</div></div><p class="objective">Apple +2. Heart +5. Rotten apple -2. Heartbreak -5.</p><div class="catch-stats"><span><b data-caught>${stage.fieldScore}</b> / ${stage.target} field points</span><span class="total-score">Total <strong data-total>${getRun().score}</strong></span></div><div class="catch-board" data-catch-board role="application" aria-label="Swipe left and right to catch apples and hearts while avoiding rotten apples and heartbreaks."><div class="field-grass"></div><div class="falling-layer">${fallingMarkup(stage.objects)}</div><div class="catcher" style="left:${stage.catcherX}%">${characterMarkup({ state: "idle", direction: facing, avatar: getRun().avatar || "male" })}<span class="catcher__basket"></span></div></div><p class="adventure-gesture-hint"><span>Swipe left or right to catch</span></p><p class="game-message">${message || "The orchard is fast. Choose what you catch."}</p></div>`, "game");
+  app.innerHTML = screenFrame(`<div class="game-card catch-card">${farmBackdropMarkup()}<div class="stage-heading"><div><p class="eyebrow">Stage 2 of 4 · Attempt ${getRun().stageRetries.catch + 1}/4</p><h1>Orchard Rush</h1></div><div class="stage-heading__actions"><span class="timer"><strong data-time>${Math.ceil(stage.timeRemaining / 1000)}</strong>s</span>${pauseButtonMarkup()}</div></div><p class="objective">Reach ${stage.target} field points in 90 seconds. Apple +2, Heart +5, Rotten apple -2, Heartbreak -5.</p><div class="catch-stats"><span><b data-caught>${stage.fieldScore}</b> / ${stage.target} field points</span><span class="total-score">Story <strong data-total>${getRun().score}</strong></span></div><div class="catch-board" data-catch-board role="application" aria-label="Swipe left and right to catch apples and hearts while avoiding rotten apples and heartbreaks."><div class="field-grass"></div><div class="falling-layer">${fallingMarkup(stage.objects)}</div><div class="catcher" style="left:${stage.catcherX}%">${characterMarkup({ state: "idle", direction: facing, avatar: getRun().avatar || "male" })}<span class="catcher__basket"></span></div></div><p class="adventure-gesture-hint"><span>Swipe left or right to catch</span></p><p class="game-message">${message || "The orchard is fast. Choose what you catch."}</p></div>`, "game");
 }
 
 function updateCatchFrame() {
@@ -228,7 +284,7 @@ function renderTransition() {
 function renderMemory() {
   const stage = getMemory();
   const cards = stage.cards.map((card) => `<button class="memory-card ${card.flipped || card.matched ? "is-flipped" : ""} ${card.matched ? "is-matched" : ""}" type="button" data-card-id="${card.id}" aria-label="Memory card" ${stage.locked || card.matched ? "disabled" : ""}><span class="memory-card__inner"><span class="memory-card__face memory-card__front">?</span><span class="memory-card__face memory-card__back">${card.icon}</span></span></button>`).join("");
-  app.innerHTML = screenFrame(`<div class="memory-card-screen">${farmBackdropMarkup()}<div class="stage-heading"><div><p class="eyebrow">Stage 3 of 3</p><h1>${gameData.stages.memory.name}</h1></div><div class="stage-heading__actions"><span class="counter" data-memory-score>${getRun().score}<small>points</small></span>${pauseButtonMarkup()}</div></div><p class="objective">Match ${stage.pairCount} farm pairs. Every 5 seconds costs 1 point.</p><div class="memory-stats"><span><b data-memory-pairs>${stage.matchedPairs}</b>/${stage.pairCount} pairs</span><span><b data-memory-time>0</b>s <small>to next −1</small></span><span><b data-memory-moves>${stage.moves}</b> moves</span></div><div class="barn-room"><div class="barn-lantern"></div><div class="memory-grid">${cards}</div><div class="memory-farmer">${characterMarkup({ state: characterAction, direction: facing, avatar: getRun().avatar || "male" })}</div></div><p class="game-message" data-memory-message>${message || "Every farm night tells a different story."}</p></div>`, "memory");
+  app.innerHTML = screenFrame(`<div class="memory-card-screen">${farmBackdropMarkup()}<div class="stage-heading"><div><p class="eyebrow">Stage 3 of 4</p><h1>${gameData.stages.memory.name}</h1></div><div class="stage-heading__actions"><span class="counter" data-memory-score>${getRun().score}<small>points</small></span>${pauseButtonMarkup()}</div></div><p class="objective">Match ${stage.pairCount} farm pairs before the 90-second timer ends.</p><div class="memory-stats"><span><b data-memory-pairs>${stage.matchedPairs}</b>/${stage.pairCount} pairs</span><span><b data-memory-time>${Math.ceil(stage.timeRemaining / 1000)}</b>s <small>left</small></span><span><b data-memory-moves>${stage.moves}</b> moves</span></div><div class="barn-room"><div class="barn-lantern"></div><div class="memory-grid">${cards}</div><div class="memory-farmer">${characterMarkup({ state: characterAction, direction: facing, avatar: getRun().avatar || "male" })}</div></div><p class="game-message" data-memory-message>${message || "Every farm night tells a different story."}</p></div>`, "memory");
 }
 
 function heartsMarkup(hearts) {
@@ -292,13 +348,13 @@ function renderWaveTransition() {
 function renderLastMemory() {
   const run = getRun();
   const praise = run.avatar === "female" ? gameData.ending.femaleMessage : gameData.ending.maleMessage;
-  const bossResult = run.lastMemory?.difficulty ? `<p class="boss-result">${gameData.stages.defend.boss.difficulties[run.lastMemory.difficulty].label} boss score <b>${run.lastMemory.bossScore}</b></p>` : "";
+  const bossResult = run.lastMemory?.difficulty ? `<p class="boss-result">${gameData.stages.defend.boss.difficulties[run.lastMemory.difficulty].label} Stage 4 score <b>${run.lastMemory.bossScore}</b></p>` : "";
   app.innerHTML = screenFrame(`<div class="last-memory-card">${farmBackdropMarkup()}<p class="eyebrow">${gameData.ending.title}</p><div class="transition-character">${characterMarkup({ state: "victory", direction: facing, avatar: run.avatar || "male" })}${rewardBurstMarkup()}</div><h1>The farmhouse is safe.</h1><p class="lede">${gameData.ending.copy}</p><p class="last-memory-card__praise">${praise}</p>${bossResult}<div class="score-row"><span>Story score</span><strong>${run.score}</strong></div><button class="button button--primary" type="button" data-action="view-result">Keep this memory <span aria-hidden="true">&#8594;</span></button></div>`, "transition");
 }
 
 function difficultyCardsMarkup() {
   const run = getRun();
-  return Object.entries(gameData.stages.defend.boss.difficulties).map(([key, level]) => `<button class="boss-level boss-level--${key}" type="button" data-defend-level="${key}"><span>${level.label}</span><strong>+${level.reward} finish points</strong><small>${level.description}</small><em>Stage best ${run.bossHighScores[key]}</em></button>`).join("");
+  return Object.entries(gameData.stages.defend.boss.difficulties).map(([key, level]) => `<button class="boss-level boss-level--${key}" type="button" data-defend-level="${key}"><span>${level.label}</span><strong>Up to ${level.stagePoints} stage points</strong><small>${level.description}</small><em>Stage best ${run.bossHighScores[key]}</em></button>`).join("");
 }
 
 function renderDefendDifficulty() {
@@ -313,12 +369,19 @@ function renderBossIntro() {
 function renderResult() {
   const run = getRun();
   const praise = run.avatar === "female" ? "I knew you were a farm baddie." : "You made the farm proud.";
-  app.innerHTML = screenFrame(`<div class="result-card"><p class="eyebrow">First quest complete</p><div class="medallion" aria-hidden="true">&#10022;</div><h1>You made it.</h1><p class="lede">${praise}</p><div class="score-row"><span>Quest score</span><strong>${run.score}</strong></div><div class="best-score">Best saved score <b>${run.bestScore}</b></div><button class="button button--primary" type="button" data-action="restart">Play again <span aria-hidden="true">&#8594;</span></button></div>`, "result");
+  const labels = { adventure: "Stage 1", catch: "Stage 2", memory: "Stage 3", defend: "Stage 4" };
+  const scoreBreakdown = stageOrder.map((stage) => `<span><small>${labels[stage]}</small><b>${run.stageScores[stage]}</b></span>`).join("");
+  app.innerHTML = screenFrame(`<div class="result-card"><p class="eyebrow">First quest complete</p><div class="medallion" aria-hidden="true">&#10022;</div><h1>You made it.</h1><p class="lede">${praise}</p><div class="score-row"><span>Quest score</span><strong>${run.score}</strong></div><div class="score-breakdown" aria-label="Score by stage">${scoreBreakdown}</div><div class="best-score">Best saved score <b>${run.bestScore}</b></div><button class="button button--primary" type="button" data-action="restart">Play again <span aria-hidden="true">&#8594;</span></button></div>`, "result");
 }
 
 function renderFailure() {
   const stage = getCatch();
-  app.innerHTML = screenFrame(`<div class="result-card"><p class="eyebrow">The orchard got wild</p><div class="medallion medallion--dim" aria-hidden="true">&#127822;</div><h1>Run the field again.</h1><p class="lede">You earned ${stage.fieldScore} of ${stage.target} field points. The good fruit is worth the chase.</p><button class="button button--primary" type="button" data-action="retry-catch">Try again <span aria-hidden="true">&#8594;</span></button><button class="text-button" type="button" data-action="restart">Start over</button></div>`, "failure");
+  const retriesLeft = 3 - getRun().stageRetries.catch;
+  app.innerHTML = screenFrame(`<div class="result-card"><p class="eyebrow">The orchard got wild</p><div class="medallion medallion--dim" aria-hidden="true">&#127822;</div><h1>Run the field again.</h1><p class="lede">You earned ${stage.fieldScore} of ${stage.target} field points in 90 seconds.</p><p class="retry-counter">${retriesLeft} ${retriesLeft === 1 ? "retry" : "retries"} left before returning to Stage 1</p><button class="button button--primary" type="button" data-action="retry-catch">Try again <span aria-hidden="true">&#8594;</span></button></div>`, "failure");
+}
+
+function renderMemoryFailure() {
+  app.innerHTML = screenFrame(`<div class="result-card"><p class="eyebrow">The lantern faded</p><div class="medallion medallion--dim" aria-hidden="true">&#127802;</div><h1>Back to the orchard.</h1><p class="lede">The barn needs every pair matched before the 90-second timer ends.</p><button class="button button--primary" type="button" data-action="return-to-catch">Return to Stage 2 <span aria-hidden="true">&#8594;</span></button></div>`, "failure");
 }
 
 function render() {
@@ -338,6 +401,7 @@ function render() {
     case "transition": renderTransition(); break;
     case "result": renderResult(); break;
     case "failure": renderFailure(); break;
+    case "memory-failure": renderMemoryFailure(); break;
     default: renderStart();
   }
 }
@@ -349,12 +413,11 @@ function startMemoryLoop() {
     const timer = updateMemoryTimer(Math.min(80, now - memoryLastFrame));
     memoryLastFrame = now;
     const stage = getMemory();
-    if (timer.penalty > 0) {
-      updateRun({ score: Math.max(0, getRun().score - timer.penalty) });
-      message = `Time slips away: -${timer.penalty}`;
+    if (timer.timedOut) {
+      updateRun({ currentScreen: "memory-failure" });
+      render();
+      return;
     }
-    const secondsIntoWindow = Math.floor(stage.elapsed / 1000) % 5;
-    const nextPenaltyIn = secondsIntoWindow === 0 && stage.elapsed > 0 ? 5 : 5 - secondsIntoWindow;
     const score = app.querySelector("[data-memory-score]");
     const pairCount = app.querySelector("[data-memory-pairs]");
     const time = app.querySelector("[data-memory-time]");
@@ -362,9 +425,8 @@ function startMemoryLoop() {
     const status = app.querySelector("[data-memory-message]");
     if (score) score.firstChild.textContent = getRun().score;
     if (pairCount) pairCount.textContent = stage.matchedPairs;
-    if (time) time.textContent = nextPenaltyIn;
+    if (time) time.textContent = Math.ceil(stage.timeRemaining / 1000);
     if (moves) moves.textContent = stage.moves;
-    if (status && timer.penalty > 0) status.textContent = message;
     memoryFrame = requestAnimationFrame(tick);
   };
   memoryFrame = requestAnimationFrame(tick);
@@ -425,7 +487,6 @@ function startDefendLoop() {
         reactDefender("throw");
       }
       if (["crow-defeated", "fox-defeated", "locust-defeated"].includes(event.type)) {
-        updateRun({ score: getRun().score + event.points });
         reactDefender("excited");
         showDefendEffect(event);
         audio.playSfx(event.type === "crow-defeated" ? "crowDefeat" : event.type === "fox-defeated" ? "foxDefeat" : "locustDefeat", { cooldown: event.type === "locust-defeated" ? 360 : 130 });
@@ -466,6 +527,7 @@ function startDefendLoop() {
       const retryKey = stage.boss ? "boss" : stage.waveIndex;
       if ((stage.attemptsByWave[retryKey] || 0) >= 3) {
         resetDefend();
+        clearScoresFrom("defend");
         updateRun({ currentScreen: "defend-select" });
         message = "That fight used all three retries. Choose a Stage 4 level and begin again.";
         render();
@@ -476,7 +538,7 @@ function startDefendLoop() {
       return;
     }
     if (result.outcome === "wave-won") {
-      updateRun({ currentScreen: "defend-wave-transition", score: getRun().score + 5 });
+      updateRun({ currentScreen: "defend-wave-transition" });
       render();
       defendTimer = window.setTimeout(() => {
         advanceDefendWave();
@@ -499,8 +561,10 @@ function startDefendLoop() {
     }
     if (result.outcome === "boss-won") {
       const stage = getDefend();
-      const bossScore = stage.score + stage.boss.reward;
-      const finalScore = getRun().score + stage.boss.reward;
+      const retriesUsed = Object.values(stage.attemptsByWave).reduce((total, attempts) => total + attempts, 0);
+      const baseScore = Math.max(20, stage.boss.difficulty && gameData.stages.defend.boss.difficulties[stage.boss.difficulty].stagePoints * Math.max(.4, 1 - retriesUsed * .15));
+      const bossScore = finishStage("defend", baseScore);
+      const finalScore = getRun().score;
       const bossHighScores = { ...getRun().bossHighScores, [stage.boss.difficulty]: Math.max(getRun().bossHighScores[stage.boss.difficulty], bossScore) };
       audio.playSfx("bossDefeat", { cooldown: 900 });
       audio.softenMusic();
@@ -537,6 +601,23 @@ function clearEffectSoon() {
   }, 620);
 }
 
+function completeAdventure() {
+  const stage = getAdventure();
+  const baseScore = Math.max(0, Math.min(30, 18 + stage.applesCollected * 2 - stage.hazardsHit * 2));
+  clearScoresFrom("catch");
+  finishStage("adventure", baseScore);
+  window.clearTimeout(transitionTimer);
+  updateRun({ currentScreen: "transition", currentStage: "catch", completedStages: ["adventure"] });
+  transitionTarget = "catch";
+  message = "";
+  characterAction = "victory";
+  transitionTimer = window.setTimeout(() => {
+    startCatchRound();
+    message = "Reach 200 field points before the timer ends.";
+    render();
+  }, 1250);
+}
+
 function handleAdventureMove(direction) {
   const outcome = moveAdventure(direction);
   if (outcome.moved) audio.playSfx("footstep", { cooldown: 190 });
@@ -544,31 +625,17 @@ function handleAdventureMove(direction) {
   characterAction = outcome.moved ? "walk" : "confused";
   if (!outcome.moved) message = "A hedge blocks the way.";
   else if (outcome.collected) {
-    updateRun({ score: getRun().score + 2 });
     message = "Fresh apple! +2";
     characterAction = "collect";
     effectCell = { ...outcome.player, label: "+2", kind: "good" };
     clearEffectSoon();
   } else if (outcome.hitHazard) {
-    updateRun({ score: Math.max(0, getRun().score - 2) });
     message = "Thorns! -2";
     characterAction = "hurt";
     effectCell = { ...outcome.player, label: "-2", kind: "bad" };
     clearEffectSoon();
   } else message = "";
-  if (outcome.complete) {
-    window.clearTimeout(transitionTimer);
-    updateRun({ currentScreen: "transition", currentStage: "catch", completedStages: ["adventure"], score: getRun().score + 10 });
-    transitionTarget = "catch";
-    message = "";
-    characterAction = "victory";
-    transitionTimer = window.setTimeout(() => {
-      resetCatch();
-      updateRun({ currentScreen: "catch" });
-      message = "A fresh field waits ahead.";
-      render();
-    }, 1250);
-  }
+  if (outcome.complete) completeAdventure();
   render();
 }
 
@@ -583,23 +650,11 @@ function handleAdventureJump() {
   characterAction = "victory";
   message = "Great jump! The thorns missed you.";
   if (outcome.collected) {
-    updateRun({ score: getRun().score + 2 });
     message = "Jump and apple! +2";
     effectCell = { ...outcome.player, label: "+2", kind: "good" };
     clearEffectSoon();
   }
-  if (outcome.complete) {
-    window.clearTimeout(transitionTimer);
-    updateRun({ currentScreen: "transition", currentStage: "catch", completedStages: ["adventure"], score: getRun().score + 10 });
-    transitionTarget = "catch";
-    message = "";
-    transitionTimer = window.setTimeout(() => {
-      resetCatch();
-      updateRun({ currentScreen: "catch" });
-      message = "A fresh field waits ahead.";
-      render();
-    }, 1250);
-  }
+  if (outcome.complete) completeAdventure();
   render();
 }
 
@@ -643,16 +698,19 @@ function startCatchLoop() {
     lastFrame = now;
     const stage = getCatch();
     if (result.event) {
-      updateRun({ score: Math.max(0, getRun().score + result.points) });
       flashCatcher(result.points > 0 ? "collect" : "hurt");
       showCatchEffect(result.event, result.eventX, result.points);
     }
     if (result.outcome === "won") {
-      updateRun({ currentScreen: "transition", currentStage: "memory", completedStages: ["adventure", "catch"], score: getRun().score + 10 });
+      const baseScore = Math.max(0, Math.min(50, 40 + Math.floor((stage.fieldScore - stage.target) / 2) + Math.floor(stage.timeRemaining / 5000) * 2));
+      clearScoresFrom("memory");
+      finishStage("catch", baseScore);
+      updateRun({ currentScreen: "transition", currentStage: "memory", completedStages: ["adventure", "catch"] });
       transitionTarget = "memory";
       message = "";
       transitionTimer = window.setTimeout(() => {
         resetMemory();
+        recordStageAttempt("memory");
         updateRun({ currentScreen: "memory" });
         message = "The barn has a secret to share.";
         render();
@@ -661,6 +719,10 @@ function startCatchLoop() {
       return;
     }
     if (result.outcome === "lost") {
+      if (getRun().stageRetries.catch >= 3) {
+        restartAdventureFromStageTwo();
+        return;
+      }
       updateRun({ currentScreen: "failure" });
       render();
       return;
@@ -676,12 +738,15 @@ function handleMemoryCard(id) {
   if (outcome.type === "ignored") return;
   characterAction = outcome.type === "match" ? "excited" : "confused";
   if (outcome.type === "match") {
-    updateRun({ score: getRun().score + 3 });
     message = `Pair found! +3`;
     if (outcome.complete) {
       characterAction = "victory";
       runWhenUnpaused(() => {
-        updateRun({ currentScreen: "transition", currentStage: "defend", completedStages: ["adventure", "catch", "memory"], score: getRun().score + 10 });
+        const stage = getMemory();
+        const baseScore = Math.max(20, 60 - Math.floor(stage.elapsed / 5000) * 2 - Math.max(0, stage.moves - stage.pairCount));
+        clearScoresFrom("defend");
+        finishStage("memory", baseScore);
+        updateRun({ currentScreen: "transition", currentStage: "defend", completedStages: ["adventure", "catch", "memory"] });
         transitionTarget = "defend";
         message = "";
         transitionTimer = window.setTimeout(() => {
@@ -809,6 +874,8 @@ app.addEventListener("click", (event) => {
   }
   if (defendLevel && getRun().currentScreen === "defend-select") {
     selectDefendDifficulty(defendLevel);
+    clearScoresFrom("defend");
+    recordStageAttempt("defend");
     updateRun({ currentScreen: "defend", defendDifficulty: defendLevel });
     message = `${gameData.stages.defend.boss.difficulties[defendLevel].label} level: Wave 1 begins. Protect the farmhouse.`;
     render();
@@ -825,13 +892,19 @@ app.addEventListener("click", (event) => {
   }
   if (action === "resume") { audio.startMusic(); resumeSavedRun(); }
   if (action === "view-result") { updateRun({ currentScreen: "result" }); }
-  if (action === "retry-catch") { resetCatch(); message = "Fresh orchard. Aim for 26 field points."; updateRun({ currentScreen: "catch" }); }
+  if (action === "retry-catch") {
+    const retries = getRun().stageRetries.catch + 1;
+    clearScoresFrom("catch");
+    recordStageAttempt("catch");
+    resetCatch();
+    message = "Fresh orchard. Reach 200 field points.";
+    updateRun({ currentScreen: "catch", stageRetries: { ...getRun().stageRetries, catch: retries } });
+  }
+  if (action === "return-to-catch") { startCatchRound(); message = "A new orchard round begins. Reach 200 field points."; }
   if (action === "retry-defend") { retryDefendWave(); message = getDefend().boss ? "The Raccoon King returns. Protect the farmhouse." : `Wave ${getDefend().wave.id}: keep the crows from the farmhouse.`; updateRun({ currentScreen: "defend" }); }
   if (action === "use-egg-bomb") {
     const bomb = useEggBomb();
     if (bomb.used) {
-      const earned = bomb.events.reduce((total, event) => total + (event.points || 0), 0);
-      updateRun({ score: getRun().score + earned });
       audio.playSfx("eggBomb", { cooldown: 700 });
       message = "Egg Bomb cleared the field!";
       render();

@@ -20,6 +20,7 @@ export const gameData = {
     memory: {
       name: "Memory Barn",
       objective: "Match the farm pairs before the lantern fades.",
+      duration: 90000,
       pairRange: { min: 8, max: 10 },
       cards: [
         { key: "apple", icon: "&#127822;", label: "apple" },
@@ -61,6 +62,7 @@ export const gameData = {
             phaseTwoAttackInterval: 1150,
             phaseTwoCrowInterval: 2500,
             reward: 15,
+            stagePoints: 80,
             waveSpawnMultiplier: 1.28,
             enemySpeedMultiplier: 0.76,
             description: "A gentler first win."
@@ -72,6 +74,7 @@ export const gameData = {
             phaseTwoAttackInterval: 850,
             phaseTwoCrowInterval: 1950,
             reward: 30,
+            stagePoints: 110,
             waveSpawnMultiplier: 1.12,
             enemySpeedMultiplier: 0.88,
             description: "A steady farm fight."
@@ -83,6 +86,7 @@ export const gameData = {
             phaseTwoAttackInterval: 650,
             phaseTwoCrowInterval: 1500,
             reward: 50,
+            stagePoints: 140,
             waveSpawnMultiplier: 1,
             enemySpeedMultiplier: 1,
             description: "The original full-strength king."

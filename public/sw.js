@@ -1,4 +1,4 @@
-const CACHE_NAME = "wander-farm-v8";
+const CACHE_NAME = "wander-farm-v9";
 const APP_SHELL = ["/", "/index.html", "/manifest.webmanifest", "/icons/wander-home-icon.svg"];
 
 self.addEventListener("install", (event) => {

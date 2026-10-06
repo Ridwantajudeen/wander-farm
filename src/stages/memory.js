@@ -43,16 +43,14 @@ export function getMemory() {
     pairCount,
     matchedPairs: cards.filter((card) => card.matched).length / 2,
     elapsed,
-    penaltyCount
+    penaltyCount,
+    timeRemaining: Math.max(0, gameData.stages.memory.duration - elapsed)
   };
 }
 
 export function updateMemoryTimer(delta) {
-  elapsed += delta;
-  const nextPenaltyCount = Math.floor(elapsed / 5000);
-  const penalty = nextPenaltyCount - penaltyCount;
-  penaltyCount = nextPenaltyCount;
-  return { penalty, elapsed, penaltyCount };
+  elapsed = Math.min(gameData.stages.memory.duration, elapsed + delta);
+  return { elapsed, timedOut: elapsed >= gameData.stages.memory.duration };
 }
 
 export function flipMemoryCard(id) {

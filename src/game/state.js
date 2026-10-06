@@ -21,6 +21,20 @@ function readBossHighScores(value) {
   }, {});
 }
 
+function readStageScores(value) {
+  return ["adventure", "catch", "memory", "defend"].reduce((scores, stage) => {
+    scores[stage] = Math.max(0, numberOr(value?.[stage]));
+    return scores;
+  }, {});
+}
+
+function readStageAttempts(value) {
+  return ["adventure", "catch", "memory", "defend"].reduce((attempts, stage) => {
+    attempts[stage] = Math.max(0, numberOr(value?.[stage]));
+    return attempts;
+  }, {});
+}
+
 function initialRun() {
   const saved = readSave();
   return {
@@ -30,6 +44,9 @@ function initialRun() {
     score: Math.max(0, numberOr(saved?.score)),
     bestScore: Math.max(0, numberOr(saved?.bestScore)),
     lastScore: Math.max(0, numberOr(saved?.lastScore)),
+    stageScores: readStageScores(saved?.stageScores),
+    stageAttempts: readStageAttempts(saved?.stageAttempts),
+    stageRetries: { catch: Math.max(0, numberOr(saved?.stageRetries?.catch)) },
     bossHighScores: readBossHighScores(saved?.bossHighScores),
     defendDifficulty: ["easy", "medium", "hard"].includes(saved?.defendDifficulty) ? saved.defendDifficulty : "hard",
     lives: 3,
@@ -53,6 +70,9 @@ function persist() {
     score,
     bestScore: Math.max(run.bestScore || 0, score),
     lastScore: run.lastScore || score,
+    stageScores: run.stageScores,
+    stageAttempts: run.stageAttempts,
+    stageRetries: run.stageRetries,
     bossHighScores: run.bossHighScores,
     defendDifficulty: run.defendDifficulty,
     currentStage: run.currentStage,
@@ -72,7 +92,7 @@ export function getRun() {
 }
 
 export function hasSavedProgress() {
-  return Boolean(run.avatar && (run.score > 0 || run.completedStages.length || run.lastMemory));
+  return Boolean(run.avatar && (run.score > 0 || run.completedStages.length || run.lastMemory || Object.values(run.stageAttempts).some((attempts) => attempts > 0)));
 }
 
 export function updateRun(changes) {
@@ -99,6 +119,9 @@ export function resetRun() {
     score: 0,
     bestScore,
     lastScore: 0,
+    stageScores: readStageScores(),
+    stageAttempts: readStageAttempts(),
+    stageRetries: { catch: 0 },
     bossHighScores,
     defendDifficulty: "hard",
     lives: 3,
@@ -118,6 +141,7 @@ export function startRun() {
   return updateRun({
     currentScreen: "adventure",
     currentStage: "adventure",
+    stageAttempts: { ...run.stageAttempts, adventure: Math.max(1, run.stageAttempts.adventure) },
     startedAt: performance.now()
   });
 }

@@ -6,23 +6,36 @@ const walls = new Set([
   "1,4", "5,4", "6,4", "1,5", "3,5", "2,6", "5,6", "1,7", "5,7"
 ]);
 
-const fragmentLocations = ["3,4", "5,1", "6,6"];
 const hazards = new Set(["0,5", "4,1", "4,5", "7,4", "3,7"]);
 const start = { x: 0, y: 7 };
 const exit = { x: 7, y: 0 };
+const requiredApples = 4;
+const appleCandidates = ["0,0", "2,0", "4,0", "5,0", "7,1", "0,2", "2,2", "3,2", "4,2", "5,2", "7,2", "0,3", "1,3", "5,3", "6,3", "7,3", "0,4", "2,4", "3,4", "4,4", "7,5", "0,6", "1,6", "3,6", "4,6", "6,6", "7,6"];
 
 let player;
 let fragments;
+let applesCollected;
+let hazardsHit;
+
+function shuffle(items) {
+  for (let index = items.length - 1; index > 0; index -= 1) {
+    const other = Math.floor(Math.random() * (index + 1));
+    [items[index], items[other]] = [items[other], items[index]];
+  }
+  return items;
+}
 
 export function resetAdventure() {
   player = { ...start };
-  fragments = new Set(fragmentLocations);
+  fragments = new Set(shuffle([...appleCandidates]).slice(0, 6));
+  applesCollected = 0;
+  hazardsHit = 0;
 }
 
 resetAdventure();
 
 export function getAdventure() {
-  return { columns, rows, walls, hazards, player, fragments, exit };
+  return { columns, rows, walls, hazards, player, fragments, exit, applesCollected, hazardsHit, requiredApples };
 }
 
 export function moveAdventure(direction) {
@@ -42,8 +55,10 @@ export function moveAdventure(direction) {
 
   player = next;
   const collected = fragments.delete(key);
+  if (collected) applesCollected += 1;
   const hitHazard = hazards.has(key);
-  const complete = player.x === exit.x && player.y === exit.y && fragments.size === 0;
+  if (hitHazard) hazardsHit += 1;
+  const complete = player.x === exit.x && player.y === exit.y && applesCollected >= requiredApples;
   return { moved: true, collected, hitHazard, complete, player: { ...player } };
 }
 
@@ -66,6 +81,7 @@ export function jumpAdventure(direction) {
 
   player = landing;
   const collected = fragments.delete(landingKey);
-  const complete = player.x === exit.x && player.y === exit.y && fragments.size === 0;
+  if (collected) applesCollected += 1;
+  const complete = player.x === exit.x && player.y === exit.y && applesCollected >= requiredApples;
   return { moved: true, jumped: true, collected, complete, player: { ...player } };
 }

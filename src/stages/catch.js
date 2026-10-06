@@ -1,5 +1,5 @@
-const target = 26;
-const duration = 34000;
+const target = 200;
+const duration = 90000;
 const values = { apple: 2, heart: 5, badApple: -2, heartbreak: -5 };
 let catcherX;
 let objects;
@@ -33,8 +33,11 @@ export function setCatcherPosition(position) {
 
 function spawnObject() {
   const roll = Math.random();
-  const type = roll < 0.43 ? "apple" : roll < 0.59 ? "heart" : roll < 0.84 ? "badApple" : "heartbreak";
-  objects.push({ id: serial++, x: 8 + Math.random() * 84, y: -8, type, speed: 0.032 + Math.random() * 0.021 });
+  const type = roll < 0.43 ? "apple" : roll < 0.51 ? "heart" : roll < 0.76 ? "badApple" : roll < 0.84 ? "heartbreak" : null;
+  if (!type) return;
+  const elapsed = duration - timeRemaining;
+  const pace = 1 + Math.floor(elapsed / 10000) * 0.15;
+  objects.push({ id: serial++, x: 8 + Math.random() * 84, y: -8, type, speed: (0.032 + Math.random() * 0.021) * pace });
 }
 
 export function updateCatch(delta) {
